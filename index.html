@@ -3,13 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#080808">
+<meta name="theme-color" content="#EEF2FF">
 <meta name="description" content="PayVibe — UPI, but not boring.">
 <title>PayVibe — UPI, but not boring.</title>
 <link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/svg+xml" href="assets/logo/payvibe-icon.svg">
+<link rel="apple-touch-icon" href="assets/logo/payvibe-icon.svg">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+
+<!-- ===================== SPLASH ===================== -->
+<div id="splash" class="splash">
+  <img src="assets/logo/payvibe-icon.svg" alt="" class="splash-icon">
+  <span class="splash-word">Pay<span class="splash-word-accent">Vibe</span></span>
+</div>
 
 <div id="app" class="app">
 
@@ -33,32 +41,40 @@
           <p id="home-subtitle">Chalo vibe karte hain.</p>
         </div>
 
-        <div class="pay-dial-wrap">
-          <button class="pay-dial" id="pay-dial-btn" aria-label="Tap to pay">
-            <svg class="pay-ring" viewBox="0 0 200 200">
-              <circle class="pay-ring-track" cx="100" cy="100" r="90" fill="none"/>
-              <circle class="pay-ring-glow" cx="100" cy="100" r="90" fill="none"/>
-            </svg>
-            <span class="pay-dial-label">READY TO PAY</span>
-          </button>
-          <p class="pay-dial-hint">TAP TO PAY</p>
+        <div class="hero-panel">
+          <span class="hero-blob hero-blob-a"></span>
+          <span class="hero-blob hero-blob-b"></span>
+          <span class="hero-sticker">
+            <svg class="icon"><use href="#icon-bolt"/></svg> Instant UPI
+          </span>
+
+          <div class="pay-dial-wrap">
+            <button class="pay-dial" id="pay-dial-btn" aria-label="Tap to pay">
+              <svg class="pay-ring" viewBox="0 0 200 200">
+                <circle class="pay-ring-track" cx="100" cy="100" r="90" fill="none"/>
+                <circle class="pay-ring-glow" cx="100" cy="100" r="90" fill="none"/>
+              </svg>
+              <span class="pay-dial-label">PAY</span>
+            </button>
+            <p class="pay-dial-hint">Tap to continue</p>
+          </div>
         </div>
 
         <div class="action-grid">
           <button class="action-card" data-nav="send">
             <span class="action-icon"><svg class="icon"><use href="#icon-send"/></svg></span>
             <span class="action-name">Send</span>
-            <span class="action-copy">Kisko ameer banana hai?</span>
+            <span class="action-copy">Kisko paisa bhejna hai?</span>
           </button>
           <button class="action-card" data-nav="scan">
             <span class="action-icon"><svg class="icon"><use href="#icon-scan"/></svg></span>
             <span class="action-name">Scan</span>
-            <span class="action-copy">QR pakdo, payment karo.</span>
+            <span class="action-copy">QR scan karo</span>
           </button>
           <button class="action-card" data-nav="request">
             <span class="action-icon"><svg class="icon"><use href="#icon-request"/></svg></span>
             <span class="action-name">Request</span>
-            <span class="action-copy">Kisse paise lene hain?</span>
+            <span class="action-copy">Paisa mangwao</span>
           </button>
         </div>
 
@@ -88,7 +104,7 @@
       <div class="screen-inner">
         <div class="sub-header">
           <button class="icon-btn" data-back><svg class="icon"><use href="#icon-back"/></svg></button>
-          <h1>Kisko ameer banana hai?</h1>
+          <h1 id="send-heading">Kisko ameer banana hai?</h1>
         </div>
 
         <form id="send-form" class="form" novalidate>
@@ -99,7 +115,7 @@
           </label>
 
           <label class="field">
-            <span class="field-label">Amount</span>
+            <span class="field-label" id="send-amount-label">Amount</span>
             <div class="amount-input">
               <span class="rupee">₹</span>
               <input type="number" id="amount" inputmode="decimal" min="1" step="0.01" placeholder="0" required>
@@ -116,7 +132,7 @@
 
           <label class="field">
             <span class="field-label">Note</span>
-            <input type="text" id="note" placeholder="Kitne rupaye sacrifice karne hain?" maxlength="60">
+            <input type="text" id="note" placeholder="Add a note (optional)" maxlength="60">
           </label>
 
           <button type="submit" class="btn-primary btn-lg">UDA DO</button>
@@ -129,7 +145,7 @@
       <div class="screen-inner">
         <div class="sub-header">
           <button class="icon-btn" data-back><svg class="icon"><use href="#icon-back"/></svg></button>
-          <h1>QR pakdo, payment karo.</h1>
+          <h1 id="scan-heading">QR scan karo.</h1>
         </div>
 
         <div class="scan-viewport" id="scan-viewport">
@@ -140,11 +156,28 @@
           </div>
           <div class="scan-fallback" id="scan-fallback" hidden>
             <svg class="icon icon-lg"><use href="#icon-scan"/></svg>
-            <p>Camera not available in this view.</p>
-            <button class="btn-secondary" id="scan-demo-btn">Try a demo QR</button>
+            <p id="scan-fallback-msg">Camera access nahi mil raha.</p>
+            <p class="scan-fallback-sub">QR image upload karke try karo.</p>
           </div>
         </div>
+
+        <div class="scan-actions">
+          <label class="btn-secondary" for="scan-upload-input">
+            <svg class="icon"><use href="#icon-scan"/></svg> Upload QR image
+          </label>
+          <input type="file" id="scan-upload-input" accept="image/*" hidden>
+          <button class="btn-secondary" id="scan-demo-btn">Try a demo QR</button>
+        </div>
+
         <p class="scan-hint">Point the camera at any UPI QR code.</p>
+
+        <div class="manual-entry" id="scan-manual-entry" hidden>
+          <label class="field">
+            <span class="field-label">Or paste a UPI payment link / ID</span>
+            <input type="text" id="scan-manual-input" placeholder="upi://pay?pa=name@bank... or name@bank" autocomplete="off" autocapitalize="off" spellcheck="false">
+          </label>
+          <button class="btn-primary" id="scan-manual-submit">Continue</button>
+        </div>
       </div>
     </section>
 
@@ -170,7 +203,7 @@
       <div class="screen-inner">
         <div class="sub-header">
           <button class="icon-btn" data-back><svg class="icon"><use href="#icon-back"/></svg></button>
-          <h1>Kisse paise lene hain?</h1>
+          <h1 id="request-heading">Kisse paise lene hain?</h1>
         </div>
         <form id="request-form" class="form" novalidate>
           <label class="field">
@@ -178,7 +211,7 @@
             <input type="text" id="req-upi-id" placeholder="name@bank" autocomplete="off" autocapitalize="off" spellcheck="false" required>
           </label>
           <label class="field">
-            <span class="field-label">Amount</span>
+            <span class="field-label" id="request-amount-label">Amount</span>
             <div class="amount-input">
               <span class="rupee">₹</span>
               <input type="number" id="req-amount" inputmode="decimal" min="1" step="0.01" placeholder="0" required>
@@ -209,10 +242,11 @@
         <div class="result-icon success-icon">
           <svg viewBox="0 0 24 24"><use href="#icon-check"/></svg>
         </div>
-        <h1 id="success-title">Ho gaya bhai!</h1>
-        <p class="result-sub">Payment complete.</p>
+        <h1 id="success-title">Ho gaya bhai.</h1>
+        <p class="result-sub" id="success-sub">Payment complete.</p>
         <div class="result-amount" id="success-amount">₹0</div>
         <div class="result-recipient" id="success-recipient">—</div>
+        <p class="result-extra" id="success-extra"></p>
         <p class="result-note" id="success-status-note">Payment initiated. Please verify the transaction in your UPI app.</p>
         <button class="btn-secondary" id="play-sound-btn">
           <svg class="icon"><use href="#icon-sound"/></svg> Play Sound
@@ -227,8 +261,8 @@
         <div class="result-icon failure-icon">
           <svg viewBox="0 0 24 24"><use href="#icon-warning"/></svg>
         </div>
-        <h1>Arre yaar, payment nahi hui.</h1>
-        <p class="result-sub">Kuch gadbad ho gayi. Dobara try kar sakte ho.</p>
+        <h1 id="failure-title">Arre yaar, payment nahi hui.</h1>
+        <p class="result-sub" id="failure-sub">Thoda scene kharab ho gaya. Dobara try kar sakte ho.</p>
         <p class="result-note" id="failure-detail">—</p>
         <button class="btn-primary btn-lg" data-nav="send">DOBARA TRY KARO</button>
         <button class="btn-secondary" data-nav="home">Go home</button>
@@ -271,10 +305,11 @@
       <div class="screen-inner">
         <div class="sub-header">
           <button class="icon-btn" data-back><svg class="icon"><use href="#icon-back"/></svg></button>
-          <h1>History</h1>
+          <h1>Payment History</h1>
         </div>
 
         <div class="search-row">
+          <svg class="icon search-icon"><use href="#icon-search"/></svg>
           <input type="text" id="history-search" placeholder="Search recipient or UPI ID" autocomplete="off">
         </div>
         <div class="tabs" id="history-filters">
@@ -363,7 +398,10 @@
             <label class="switch"><input type="checkbox" id="setting-demo" checked><span class="switch-track"></span></label>
           </div>
           <button class="list-item" data-nav="sounds"><span>Default Sound</span></button>
+          <button class="list-item" data-nav="personality"><span>Personality</span><span class="list-item-value" id="pv-settings-personality">Funny</span></button>
+          <div class="list-item"><span>Theme</span><span class="list-item-value">Dark Gold</span></div>
           <button class="list-item danger" id="clear-history-btn"><span>Clear Local History</span></button>
+          <button class="list-item" data-nav="about"><span>Privacy</span></button>
           <button class="list-item" data-nav="about"><span>About</span></button>
         </div>
       </div>
@@ -417,6 +455,19 @@
   <!-- ===================== TOAST ===================== -->
   <div class="toast" id="toast"></div>
 
+  <!-- ===================== SUCCESS POPUP ===================== -->
+  <div class="modal-overlay" id="success-popup" hidden>
+    <div class="modal-card">
+      <div class="modal-icon">
+        <svg viewBox="0 0 24 24"><use href="#icon-check"/></svg>
+      </div>
+      <h2 id="popup-title">Ho gaya bhai!</h2>
+      <div class="modal-amount" id="popup-amount">₹0</div>
+      <p class="modal-recipient" id="popup-recipient">—</p>
+      <button class="btn-primary btn-lg" id="popup-ok-btn">OK</button>
+    </div>
+  </div>
+
 </div>
 
 <!-- ===================== SVG SPRITE (icon defs, inlined for WebView/file:// reliability) ===================== -->
@@ -438,6 +489,9 @@
   <symbol id="icon-close" viewBox="0 0 24 24"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></symbol>
   <symbol id="icon-shuffle" viewBox="0 0 24 24"><path d="M4 6H7.5L15 18H20" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 6H20M4 18H7.5" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M17.5 3.5L20 6L17.5 8.5M17.5 15.5L20 18L17.5 20.5" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="icon-home" viewBox="0 0 24 24"><path d="M4 11L12 4L20 11" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 9.5V19C6 19.55 6.45 20 7 20H10V15C10 14.45 10.45 14 11 14H13C13.55 14 14 14.45 14 15V20H17C17.55 20 18 19.55 18 19V9.5" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="icon-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" stroke-width="1.6" fill="none"/><line x1="15.3" y1="15.3" x2="20.5" y2="20.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="icon-more" viewBox="0 0 24 24"><circle cx="5.5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="18.5" cy="12" r="1.6" fill="currentColor"/></symbol>
+  <symbol id="icon-bolt" viewBox="0 0 24 24"><path d="M13 3L5 14H11.5L11 21L19 10H12.5L13 3Z" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linejoin="round" stroke-linecap="round"/></symbol>
 </svg>
 
 <script src="app.js" defer></script>
