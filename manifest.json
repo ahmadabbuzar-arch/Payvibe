@@ -1,0 +1,11 @@
+{
+  "name": "PayVibe",
+  "short_name": "PayVibe",
+  "description": "UPI, but not boring.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#080808",
+  "theme_color": "#080808",
+  "icons": []
+}
