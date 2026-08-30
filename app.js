@@ -71,21 +71,23 @@
       funny: {
         label: "Funny",
         desc: "Light jokes, good vibes.",
-        home: { title: "Aaj kitna paisa udaana hai?", subtitle: "Chalo vibe karte hain." },
+        home: { title: "Aaj kitna paisa udaana hai?", subtitle: "Kisko ameer banana hai?" },
         send: "Kisko ameer banana hai?",
         request: "Kisse paise lene hain?",
-        amount: "Kitne rupaye sacrifice karne hain?",
-        scan: "QR pakdo, payment karo.",
+        amount: "Kitna sacrifice karna hai?",
+        scan: "QR scan karo.",
         processing: [
-          "Paisa pack ho raha hai...",
-          "UPI wale uncle se baat ho rahi hai...",
+          "Payment jaa rahi hai...",
+          "UPI se baat ho rahi hai...",
           "Paisa safar par hai...",
-          "Bas pahunchne wala hai..."
+          "Almost done..."
         ],
-        success: "Ho gaya bhai!",
+        success: "Ho gaya bhai.",
+        successExtra: "Ab tension khatam.",
         failure: "Arre yaar, payment nahi hui.",
-        noUpiApp: "Bhai, koi UPI app to chahiye.",
-        noInternet: "Internet so raha hai. Thodi der baad aana.",
+        failureExtra: "Thoda scene kharab ho gaya. Dobara try kar sakte ho.",
+        noUpiApp: "Koi compatible UPI app nahi mila.",
+        noInternet: "Internet thoda break par hai.",
         emptyHistory: "Abhi tak ek rupaya bhi nahi udaaya?"
       },
       savage: {
@@ -103,7 +105,9 @@
           "Ek second, ho hi raha hai..."
         ],
         success: "Ho gaya, khatam kissa.",
+        successExtra: "Seedha, simple, done.",
         failure: "Nahi hua bhai. Bank ne mana kar diya.",
+        failureExtra: "Dobara try kar, ho jaayega.",
         noUpiApp: "UPI app daal pehle, phir aana.",
         noInternet: "Net nahi hai. Router ko jaga.",
         emptyHistory: "Ek transaction bhi nahi? Seriously?"
@@ -118,7 +122,9 @@
         scan: "QR scan karo.",
         processing: ["Processing.", "Ho raha hai.", "Ruko.", "Almost done."],
         success: "Ho gaya.",
+        successExtra: "",
         failure: "Nahi hua.",
+        failureExtra: "Dobara try karo.",
         noUpiApp: "UPI app nahi mila.",
         noInternet: "Internet nahi hai.",
         emptyHistory: "Koi transaction nahi hai."
@@ -138,7 +144,9 @@
           "Almost respawn ho raha hai..."
         ],
         success: "LEVEL COMPLETE!",
+        successExtra: "XP earned. Balance updated.",
         failure: "GAME OVER. Retry karo.",
+        failureExtra: "One more attempt left. Go.",
         noUpiApp: "UPI app install karo, warna game start nahi hoga.",
         noInternet: "Connection lost. Wifi check karo.",
         emptyHistory: "Koi match khela hi nahi ab tak?"
@@ -158,7 +166,9 @@
           "Bas ho hi gaya samajh..."
         ],
         success: "Payment ho gaya boss!",
+        successExtra: "Style se, tension free.",
         failure: "Nahi hua boss, dobara try kar.",
+        failureExtra: "Boss log haarte nahi, dobara try karte hain.",
         noUpiApp: "Boss, UPI app to hona chahiye.",
         noInternet: "Internet down hai, boss.",
         emptyHistory: "Ek bhi transaction nahi, boss?"
@@ -176,7 +186,9 @@
       scan: "Scan a UPI QR code",
       processing: ["Processing your payment..."],
       success: "Payment sent",
+      successExtra: "",
       failure: "Payment failed",
+      failureExtra: "Please try again.",
       noUpiApp: "No UPI app was found on this device.",
       noInternet: "You're offline. Check your connection and try again.",
       emptyHistory: "No transactions yet."
@@ -385,9 +397,14 @@
 
   /* ------------------------------------------------------------------
      QR SCANNER
-     Uses the native BarcodeDetector API where available (no external
-     library needed). Falls back gracefully when camera/detector is
-     unavailable, e.g. inside a restricted WebView.
+     Primary path: native BarcodeDetector API against the live camera feed
+     (works for both video frames and uploaded still images — no external
+     library needed, which matters for an offline WebView/APK build).
+     Robust fallback chain when that isn't available:
+       1) camera preview still shown, user can upload a QR image instead
+       2) if BarcodeDetector is unsupported entirely, image decoding can't
+          run client-side either, so we surface a manual paste field so
+          the payment flow still works end-to-end.
      ------------------------------------------------------------------ */
   const QrScanner = (function () {
     let stream = null;
@@ -395,14 +412,28 @@
     let rafId = null;
     let videoEl = null;
     let onResult = null;
+    let cameraAvailable = false;
+
+    function detectorSupported() {
+      return "BarcodeDetector" in window;
+    }
 
     async function start(video, resultCallback) {
       videoEl = video;
       onResult = resultCallback;
-      const fallback = document.getElementById("scan-fallback");
+      cameraAvailable = false;
+      hideFallback();
+
+      if (detectorSupported()) {
+        try {
+          detector = new window.BarcodeDetector({ formats: ["qr_code"] });
+        } catch (e) {
+          detector = null;
+        }
+      }
 
       if (!("mediaDevices" in navigator) || !navigator.mediaDevices.getUserMedia) {
-        showFallback();
+        showFallback("Camera access nahi mil raha.", "QR image upload karke try karo.");
         return;
       }
 
@@ -412,22 +443,40 @@
         });
         video.srcObject = stream;
         await video.play();
-        fallback.hidden = true;
+        cameraAvailable = true;
 
-        if ("BarcodeDetector" in window) {
-          detector = new window.BarcodeDetector({ formats: ["qr_code"] });
+        if (detector) {
           scanLoop();
+        } else {
+          // Camera works but no live decode available in this WebView —
+          // still usable via the upload / manual paste routes.
+          showFallback("Live scanning isn't supported in this view.", "QR image upload karke try karo, ya link paste karo.");
         }
-        // If BarcodeDetector isn't supported, camera preview still shows;
-        // user can use the demo QR button to proceed.
       } catch (e) {
-        showFallback();
+        showFallback("Camera access nahi mil raha.", "QR image upload karke try karo.");
       }
     }
 
-    function showFallback() {
+    function showFallback(msg, sub) {
       const fallback = document.getElementById("scan-fallback");
-      if (fallback) fallback.hidden = false;
+      const manual = document.getElementById("scan-manual-entry");
+      if (fallback) {
+        fallback.hidden = false;
+        const msgEl = document.getElementById("scan-fallback-msg");
+        const subEl = fallback.querySelector(".scan-fallback-sub");
+        if (msgEl && msg) msgEl.textContent = msg;
+        if (subEl && sub) subEl.textContent = sub;
+      }
+      // Only surface manual text entry once we know image-based decoding
+      // won't work either (no BarcodeDetector at all).
+      if (manual) manual.hidden = detectorSupported();
+    }
+
+    function hideFallback() {
+      const fallback = document.getElementById("scan-fallback");
+      const manual = document.getElementById("scan-manual-entry");
+      if (fallback) fallback.hidden = true;
+      if (manual) manual.hidden = true;
     }
 
     async function scanLoop() {
@@ -443,6 +492,22 @@
       rafId = requestAnimationFrame(scanLoop);
     }
 
+    // Decodes a QR code from a user-selected image file. Reuses the same
+    // BarcodeDetector used for live scanning — it accepts any
+    // CanvasImageSource, so a still image works the same way a video
+    // frame does. Returns null if decoding isn't possible/found nothing.
+    async function decodeImageFile(file) {
+      if (!detectorSupported()) return null;
+      try {
+        const bitmap = await createImageBitmap(file);
+        const localDetector = detector || new window.BarcodeDetector({ formats: ["qr_code"] });
+        const codes = await localDetector.detect(bitmap);
+        return codes && codes.length ? codes[0].rawValue : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
     function stop() {
       if (rafId) cancelAnimationFrame(rafId);
       rafId = null;
@@ -451,12 +516,16 @@
         stream = null;
       }
       detector = null;
+      cameraAvailable = false;
     }
 
     // Parses a scanned UPI QR string (upi://pay?...) into fields.
+    // Also accepts a bare UPI ID (name@bank) typed/pasted manually.
     function parseUpiQr(text) {
+      if (!text) return null;
+      const trimmed = text.trim();
       try {
-        const url = new URL(text);
+        const url = new URL(trimmed);
         return {
           pa: url.searchParams.get("pa") || "",
           pn: url.searchParams.get("pn") || "",
@@ -464,11 +533,15 @@
           tn: url.searchParams.get("tn") || ""
         };
       } catch (e) {
+        // Not a URL — treat a bare "name@bank" string as a UPI ID.
+        if (UpiService.validateUpiId(trimmed)) {
+          return { pa: trimmed, pn: trimmed.split("@")[0], am: "", tn: "" };
+        }
         return null;
       }
     }
 
-    return { start, stop, parseUpiQr };
+    return { start, stop, parseUpiQr, decodeImageFile, detectorSupported };
   })();
 
   /* ------------------------------------------------------------------
@@ -527,6 +600,7 @@
 
     function show(name, opts) {
       opts = opts || {};
+      hideSuccessPopup();
       document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
       const target = document.getElementById("screen-" + name);
       if (!target) { console.warn("Unknown screen", name); return; }
@@ -560,13 +634,29 @@
 
   function onScreenEnter(name) {
     if (name === "home") renderHome();
+    if (name === "send") renderSendScreen();
+    if (name === "request") renderRequestScreen();
     if (name === "sounds") renderSounds();
     if (name === "history") renderHistory();
     if (name === "personality") renderPersonality();
     if (name === "profile") renderProfileMeta();
     if (name === "settings") syncSettingsUI();
-    if (name === "scan") startScanFlow();
+    if (name === "scan") { renderScanScreen(); startScanFlow(); }
     else QrScanner.stop();
+  }
+
+  function renderSendScreen() {
+    document.getElementById("send-heading").textContent = Copy.get("send");
+    document.getElementById("send-amount-label").textContent = Copy.get("amount");
+  }
+
+  function renderRequestScreen() {
+    document.getElementById("request-heading").textContent = Copy.get("request");
+    document.getElementById("request-amount-label").textContent = Copy.get("amount");
+  }
+
+  function renderScanScreen() {
+    document.getElementById("scan-heading").textContent = Copy.get("scan");
   }
 
   /* ------------------------------------------------------------------
@@ -590,7 +680,7 @@
   function txRowEl(t, opts) {
     opts = opts || {};
     const row = document.createElement(opts.navigable ? "button" : "div");
-    row.className = "tx-row";
+    row.className = "tx-row tx-row--" + (t.status || "initiated");
     row.innerHTML = `
       <span class="tx-avatar">${initials(t.recipient)}</span>
       <span class="tx-info">
@@ -722,6 +812,8 @@
         Storage.set(Storage.KEYS.PERSONALITY, key);
         renderPersonality();
         document.getElementById("pv-personality").textContent = p.label;
+        document.getElementById("pv-settings-personality").textContent = p.label;
+        renderHome();
         toast(p.label + " personality selected.");
       });
       grid.appendChild(card);
@@ -730,6 +822,7 @@
 
   function renderProfileMeta() {
     document.getElementById("pv-personality").textContent = Copy.current().label;
+    document.getElementById("pv-settings-personality").textContent = Copy.current().label;
     document.getElementById("pv-my-sound").textContent =
       soundMode === "random" ? "Random" : soundMode === "favorite" ? "Favorite" : "Silent";
     document.getElementById("fun-mode-toggle").checked = settings.funMode;
@@ -792,6 +885,7 @@
     document.getElementById("setting-fun").checked = settings.funMode;
     document.getElementById("setting-haptic").checked = settings.haptic;
     document.getElementById("setting-demo").checked = settings.demoMode;
+    document.getElementById("pv-settings-personality").textContent = Copy.current().label;
     updateDemoBadge();
   }
 
@@ -912,13 +1006,15 @@
   }
 
   function showSuccess(payload) {
-    haptic([10, 30, 10]);
     const chosenSound = SoundManager.resolveSoundForEvent();
     const message = Copy.get("success");
+    const extra = Copy.get("successExtra");
 
     document.getElementById("success-title").textContent = message;
+    document.getElementById("success-sub").textContent = "Payment complete.";
     document.getElementById("success-amount").textContent = fmtRupee(payload.am);
     document.getElementById("success-recipient").textContent = payload.recipient || payload.pa;
+    document.getElementById("success-extra").textContent = extra || "";
     document.getElementById("success-status-note").textContent =
       "Payment initiated. Please verify the transaction in your UPI app.";
 
@@ -943,11 +1039,38 @@
 
     Nav.show("success", { replace: true });
     spawnParticles(document.getElementById("screen-success"));
+    showSuccessPopup(payload, message);
     renderHome();
+  }
+
+  // Celebratory popup shown the moment a payment is initiated, paired
+  // with a distinct vibration pattern. Auto-dismisses, or the person
+  // can tap OK / the backdrop to close it immediately.
+  function showSuccessPopup(payload, message) {
+    const popup = document.getElementById("success-popup");
+    document.getElementById("popup-title").textContent = message;
+    document.getElementById("popup-amount").textContent = fmtRupee(payload.am);
+    document.getElementById("popup-recipient").textContent = payload.recipient || payload.pa;
+
+    popup.hidden = false;
+    requestAnimationFrame(() => popup.classList.add("show"));
+    haptic([15, 60, 15, 60, 40]);
+
+    clearTimeout(showSuccessPopup._timer);
+    showSuccessPopup._timer = setTimeout(hideSuccessPopup, 2400);
+  }
+
+  function hideSuccessPopup() {
+    const popup = document.getElementById("success-popup");
+    clearTimeout(showSuccessPopup._timer);
+    popup.classList.remove("show");
+    setTimeout(() => { popup.hidden = true; }, 200);
   }
 
   function showFailure(detail, payload) {
     haptic([20, 40, 20, 40]);
+    document.getElementById("failure-title").textContent = Copy.get("failure");
+    document.getElementById("failure-sub").textContent = Copy.get("failureExtra") || "";
     document.getElementById("failure-detail").textContent = detail;
     History.add({
       recipient: (payload && (payload.recipient || payload.pa)) || "Unknown",
@@ -967,6 +1090,7 @@
   function startScanFlow() {
     const video = document.getElementById("scan-video");
     document.getElementById("scan-fallback").hidden = true;
+    document.getElementById("scan-manual-entry").hidden = true;
     QrScanner.start(video, (rawValue) => {
       const parsed = QrScanner.parseUpiQr(rawValue);
       if (!parsed || !parsed.pa) {
@@ -998,6 +1122,47 @@
     openScanConfirm({ pa: "chaishop@okaxis", pn: "Chai Shop", am: "120", tn: "Demo QR" });
   });
 
+  // Upload-a-QR-image fallback — works whenever BarcodeDetector exists,
+  // regardless of whether the live camera path is available.
+  document.getElementById("scan-upload-input").addEventListener("change", async (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+
+    if (!QrScanner.detectorSupported()) {
+      toast("Image scanning isn't supported here. Paste the UPI link below.");
+      document.getElementById("scan-fallback").hidden = false;
+      document.getElementById("scan-manual-entry").hidden = false;
+      return;
+    }
+
+    toast("Reading QR image...");
+    const raw = await QrScanner.decodeImageFile(file);
+    if (!raw) {
+      toast("Couldn't read a QR code in that image.");
+      return;
+    }
+    const parsed = QrScanner.parseUpiQr(raw);
+    if (!parsed || !parsed.pa) {
+      toast("That doesn't look like a UPI QR code.");
+      return;
+    }
+    openScanConfirm(parsed);
+  });
+
+  // Manual paste — last-resort path when neither live scanning nor image
+  // decoding is available in the WebView.
+  document.getElementById("scan-manual-submit").addEventListener("click", () => {
+    const input = document.getElementById("scan-manual-input");
+    const parsed = QrScanner.parseUpiQr(input.value);
+    if (!parsed || !parsed.pa) {
+      toast("Enter a valid UPI link or UPI ID, e.g. name@bank.");
+      return;
+    }
+    input.value = "";
+    openScanConfirm(parsed);
+  });
+
   /* ------------------------------------------------------------------
      GLOBAL NAVIGATION WIRING
      ------------------------------------------------------------------ */
@@ -1016,16 +1181,14 @@
     Nav.show("send");
   });
 
-  document.getElementById("play-sound-btn").addEventListener("click", () => {
-    // handled per-flow in showSuccess, this is a safe no-op fallback
+  document.getElementById("popup-ok-btn").addEventListener("click", hideSuccessPopup);
+  document.getElementById("success-popup").addEventListener("click", (e) => {
+    if (e.target.id === "success-popup") hideSuccessPopup();
   });
 
   // Intercept Android hardware/WebView back button when exposed via popstate.
   window.addEventListener("popstate", () => { Nav.back(); });
   history.pushState({ screen: "home" }, "");
-  document.addEventListener("click", () => {
-    // Keep a history entry so WebView back-button gestures map to in-app nav.
-  });
 
   /* ------------------------------------------------------------------
      BOOTSTRAP
@@ -1040,6 +1203,12 @@
     if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
       navigator.serviceWorker.register("./service-worker.js").catch(() => {});
     }
+
+    // Brief branded splash, then reveal the app. Kept short and static —
+    // no motion beyond a subtle pulse, so it reads as premium rather
+    // than as a loading gimmick.
+    const splash = document.getElementById("splash");
+    setTimeout(() => { if (splash) splash.classList.add("hide"); }, 650);
   }
 
   document.addEventListener("DOMContentLoaded", boot);
