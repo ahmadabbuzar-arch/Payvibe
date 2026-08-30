@@ -1,0 +1,13 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="PayVibe icon">
+  <defs>
+    <linearGradient id="pv-icon-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E0B83F"/>
+      <stop offset="55%" stop-color="#C9A227"/>
+      <stop offset="100%" stop-color="#8F7418"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="#0B0B0B"/>
+  <circle cx="32" cy="32" r="21" fill="none" stroke="url(#pv-icon-gold)" stroke-width="3.2"/>
+  <path d="M15 34 C 20 23, 26 23, 32 32 S 43 41, 49 30" fill="none" stroke="url(#pv-icon-gold)" stroke-width="3.2" stroke-linecap="round"/>
+  <circle cx="32" cy="32" r="4" fill="url(#pv-icon-gold)"/>
+</svg>

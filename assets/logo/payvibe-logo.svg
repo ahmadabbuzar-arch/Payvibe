@@ -1,0 +1,17 @@
+<svg viewBox="0 0 240 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="PayVibe">
+  <defs>
+    <linearGradient id="pv-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E0B83F"/>
+      <stop offset="55%" stop-color="#C9A227"/>
+      <stop offset="100%" stop-color="#8F7418"/>
+    </linearGradient>
+  </defs>
+  <!-- symbol: coin ring cut by a motion/pulse arc -->
+  <g>
+    <circle cx="32" cy="32" r="24" fill="none" stroke="url(#pv-gold)" stroke-width="3.5"/>
+    <path d="M14 34 C 20 22, 26 22, 32 32 S 44 42, 50 30" fill="none" stroke="url(#pv-gold)" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="32" cy="32" r="4.5" fill="url(#pv-gold)"/>
+  </g>
+  <!-- wordmark -->
+  <text x="68" y="40" font-family="'Space Grotesk','Segoe UI',sans-serif" font-weight="700" font-size="27" letter-spacing="0.5" fill="#F5F5F5">Pay<tspan fill="url(#pv-gold)">Vibe</tspan></text>
+</svg>
